@@ -220,7 +220,18 @@ uint64_t check_capability(afl_forkserver_t *fsrv) {
   uint64_t result = 0;
 
   FILE *fp = fopen(fsrv->pCapResFilePath, "r");
-  if (!fp) PFATAL("Unable to open '%s'", fsrv->pCapResFilePath);
+  if (!fp) {
+    SAYF("\n" cLRD "[-] " cRST
+      "Whoops, %s is missing. Please make sure that\n"
+      "    your target can indeed crash with your input "
+      "as well as\n"
+      "    ASAN must detect it then give the report.\n"
+      "    If your stuff works well, it may be a regression of "
+      "the issue fixed in commit 6ecbd4b.\n"
+      "    Report this at https://github.com/HexHive/Evocatio/issues "
+      "for futher help.\n", fsrv->pCapResFilePath);
+    PFATAL("Unable to open '%s'", fsrv->pCapResFilePath);
+  }
 
   fread(&result, sizeof(u32), 1, fp); //must be consistent with __afl_evo_SaveCap
   fclose(fp);
