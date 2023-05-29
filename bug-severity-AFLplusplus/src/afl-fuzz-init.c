@@ -657,8 +657,22 @@ void read_testcases(afl_state_t *afl, u8 *directory) {
   u8              val_buf[2][STRINGIFY_VAL_SIZE_MAX];
 
 #if EVO_DELAY_FUZZ
-  if (dir == NULL)
-    FATAL("non-in-place resumption attempts are not allowed!");
+  if (dir == NULL) {
+
+    fn1 = alloc_printf("%s/queue", afl->in_dir);
+    if (!access(fn1, F_OK)) {
+
+      FATAL("Auto-detect non-in-place resumption attempts are not allowed!");
+
+    } else {
+
+      ck_free(fn1);
+
+    }
+
+    dir = afl->in_dir;
+
+  }
 
   DIR *dir_to_check = opendir(dir);
   if (!dir_to_check)
