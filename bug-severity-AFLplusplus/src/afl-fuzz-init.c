@@ -674,23 +674,48 @@ void read_testcases(afl_state_t *afl, u8 *directory) {
 
   }
 
-  DIR *dir_to_check = opendir(dir);
-  if (!dir_to_check)
-    PFATAL("Unable to check '%s'", dir);
-
   ACTF("Scanning '%s'...", dir);
-  while (!afl->stop_soon && !readdir(dir_to_check)) {
-    ACTF("Nothing to read in '%s'. Go to sleep...", dir);
-    sleep(EVO_DELAY_SECS);
+
+  while (!afl->stop_soon) {
+  
+    // must re-open each time we arrive here
+    // otherwise the dir status won't refresh
+    DIR *dir_to_check = opendir(dir);
+    if (!dir_to_check)
+      PFATAL("Unable to scan '%s'", dir);
+
+    struct dirent *tmp_dp;
+    while ((tmp_dp = readdir(dir_to_check)) != NULL) {
+
+      if (strcmp(tmp_dp->d_name, ".") == 0 || strcmp(tmp_dp->d_name, "..") == 0)
+        continue;
+      
+      struct stat st;
+      u8 *fn2 = alloc_printf("%s/%s", dir, tmp_dp->d_name);
+
+      if (lstat(fn2, &st))
+        PFATAL("Unable to access '%s'", fn2);
+
+      ck_free(fn2);
+
+      if (S_ISREG(st.st_mode))
+        break; // found a file
+    }
+
+    if (closedir(dir_to_check))
+      PFATAL("Failed to close '%s'", dir);
+
+    if (!tmp_dp) {
+      ACTF("Nothing to read in '%s'. Go to sleep...", dir);
+      sleep(EVO_DELAY_SECS);
+    } else {
+      break;
+    }
+
   }
 
-  if (!closedir(dir_to_check))
-    PFATAL("Failed to close '%s'", dir);
-
-  if (!afl->stop_soon) {
-    ACTF("Now '%s' is not empty. Let's take a nap before we set off!", dir);
-    sleep(EVO_DELAY_SECS); // in case for some damn situations!
-  }
+  if (!afl->stop_soon)
+    ACTF("Now '%s' is not empty. Let's go on!", dir);
 #else
   /* Auto-detect non-in-place resumption attempts. */
 
@@ -790,8 +815,9 @@ void read_testcases(afl_state_t *afl, u8 *directory) {
       }
 
 #if EVO_DELAY_FUZZ
-      //ugly hack so that we do not need a '-k' option,
-      //because we start from scratch - no initial inputs until we meet one.
+      // FIXME:
+      // It's an ugly hack so that we don't need to use '-k' option,
+      // because we start from scratch - no initial inputs until we meet one.
       memset(afl->initial_poc_path, '\0', sizeof(afl->initial_poc_path));
       strncpy(afl->initial_poc_path, fn2, sizeof(afl->initial_poc_path)-1);
 #endif

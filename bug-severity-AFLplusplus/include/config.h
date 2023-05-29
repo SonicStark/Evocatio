@@ -33,7 +33,7 @@
 #define EVOCATIO_PLZ_HELP_RESPATH 0
 
 #define EVO_DELAY_FUZZ 1
-#define EVO_DELAY_SECS 30U
+#define EVO_DELAY_SECS 5U
 
 /* Version string: */
 
