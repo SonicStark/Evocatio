@@ -32,6 +32,9 @@
 #define EVOCATIO_STACK_FRAME_MAXNUM 20
 #define EVOCATIO_PLZ_HELP_RESPATH 0
 
+#define EVO_DELAY_FUZZ 1
+#define EVO_DELAY_SECS 30U
+
 /* Version string: */
 
 // c = release, a = volatile github dev, e = experimental branch

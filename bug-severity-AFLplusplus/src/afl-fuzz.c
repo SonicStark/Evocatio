@@ -544,7 +544,22 @@ int main(int argc, char **argv_orig, char **envp) {
         afl->in_dir = optarg;
 
         if (!strcmp(afl->in_dir, "-")) { afl->in_place_resume = 1; }
+#if EVO_DELAY_FUZZ
+        else {
+          afl->foreign_syncs[afl->foreign_sync_cnt].dir = optarg;
+          while (afl->foreign_syncs[afl->foreign_sync_cnt]
+                    .dir[strlen(afl->foreign_syncs[afl->foreign_sync_cnt].dir) -
+                          1] == '/') {
 
+            afl->foreign_syncs[afl->foreign_sync_cnt]
+                .dir[strlen(afl->foreign_syncs[afl->foreign_sync_cnt].dir) - 1] =
+                0;
+
+          }
+
+          afl->foreign_sync_cnt++;
+        }
+#endif // EVO_DELAY_FUZZ
         break;
 
       case 'o':                                               /* output dir */
@@ -627,6 +642,9 @@ int main(int argc, char **argv_orig, char **envp) {
 
       case 'F':                                         /* foreign sync dir */
 
+#if EVO_DELAY_FUZZ
+        FATAL("Option -F is not supported!");
+#else
         if (!optarg) { FATAL("Missing path for -F"); }
         if (!afl->is_main_node) {
 
@@ -655,6 +673,7 @@ int main(int argc, char **argv_orig, char **envp) {
         }
 
         afl->foreign_sync_cnt++;
+#endif // EVO_DELAY_FUZZ
         break;
 
       case 'f':                                              /* target file */
@@ -2234,6 +2253,47 @@ int main(int argc, char **argv_orig, char **envp) {
 
     } while (skipped_fuzz && afl->queue_cur && !afl->stop_soon);
 
+#if EVO_DELAY_FUZZ
+    if (likely(!afl->stop_soon)) {
+
+      if (likely(afl->skip_deterministic)) {
+
+        if (unlikely(afl->is_main_node)) {
+
+          if (unlikely(get_cur_time() >
+                       (SYNC_TIME >> 1) + afl->last_sync_time)) {
+
+            if (!(sync_interval_cnt++ % (SYNC_INTERVAL / 3))) {
+
+              if (afl->sync_id) sync_fuzzers(afl);
+              if (afl->foreign_sync_cnt) read_foreign_testcases(afl, 0);
+
+            }
+
+          }
+
+        } else {
+
+          if (unlikely(get_cur_time() > SYNC_TIME + afl->last_sync_time)) {
+
+            if (!(sync_interval_cnt++ % SYNC_INTERVAL)) {
+              if (afl->sync_id) sync_fuzzers(afl);
+              if (afl->foreign_sync_cnt) read_foreign_testcases(afl, 0);
+            }
+
+          }
+
+        }
+
+      } else {
+
+        if (afl->sync_id) sync_fuzzers(afl);
+        if (afl->foreign_sync_cnt) read_foreign_testcases(afl, 0);
+
+      }
+
+    }
+#else // EVO_DELAY_FUZZ
     if (likely(!afl->stop_soon && afl->sync_id)) {
 
       if (likely(afl->skip_deterministic)) {
@@ -2268,6 +2328,7 @@ int main(int argc, char **argv_orig, char **envp) {
       }
 
     }
+#endif // EVO_DELAY_FUZZ
 
   }
 

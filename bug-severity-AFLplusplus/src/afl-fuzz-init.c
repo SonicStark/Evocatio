@@ -656,6 +656,28 @@ void read_testcases(afl_state_t *afl, u8 *directory) {
   u8 *            fn1, *dir = directory;
   u8              val_buf[2][STRINGIFY_VAL_SIZE_MAX];
 
+#if EVO_DELAY_FUZZ
+  if (dir == NULL)
+    FATAL("non-in-place resumption attempts are not allowed!");
+
+  DIR *dir_to_check = opendir(dir);
+  if (!dir_to_check)
+    PFATAL("Unable to check '%s'", dir);
+
+  ACTF("Scanning '%s'...", dir);
+  while (!afl->stop_soon && !readdir(dir_to_check)) {
+    ACTF("Nothing to read in '%s'. Go to sleep...", dir);
+    sleep(EVO_DELAY_SECS);
+  }
+
+  if (!closedir(dir_to_check))
+    PFATAL("Failed to close '%s'", dir);
+
+  if (!afl->stop_soon) {
+    ACTF("Now '%s' is not empty. Let's take a nap before we set off!", dir);
+    sleep(EVO_DELAY_SECS); // in case for some damn situations!
+  }
+#else
   /* Auto-detect non-in-place resumption attempts. */
 
   if (dir == NULL) {
@@ -677,6 +699,7 @@ void read_testcases(afl_state_t *afl, u8 *directory) {
   }
 
   ACTF("Scanning '%s'...", dir);
+#endif
 
   /* We use scandir() + alphasort() rather than readdir() because otherwise,
      the ordering of test cases would vary somewhat randomly and would be

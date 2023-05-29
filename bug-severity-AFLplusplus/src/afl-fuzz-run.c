@@ -564,7 +564,10 @@ void sync_fuzzers(afl_state_t *afl) {
 
   }
 
+#if EVO_DELAY_FUZZ
+#else
   if (afl->foreign_sync_cnt) read_foreign_testcases(afl, 0);
+#endif
 
   afl->last_sync_time = get_cur_time();
   afl->last_sync_cycle = afl->queue_cycle;
