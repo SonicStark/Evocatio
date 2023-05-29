@@ -775,6 +775,13 @@ void read_testcases(afl_state_t *afl, u8 *directory) {
 
       }
 
+#if EVO_DELAY_FUZZ
+      //ugly hack so that we do not need a '-k' option,
+      //because we start from scratch - no initial inputs until we meet one.
+      memset(afl->initial_poc_path, '\0', sizeof(afl->initial_poc_path));
+      strncpy(afl->initial_poc_path, fn2, sizeof(afl->initial_poc_path)-1);
+#endif
+
       if (st.st_size > MAX_FILE) {
 
         WARNF("Test case '%s' is too big (%s, limit is %s), partial reading",
